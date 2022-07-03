@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @font-face {
+                font-family: Source Sans Pro;
+                src: local("Source Sans Pro"), local("SourceSansPro-Regular"), url(https://fonts.gstatic.com/s/sourcesanspro/v9/ODelI1aHBYDBqgeIAH2zlALoXdG0Fk4RrwjAMg10_dg.woff) format("woff");
+                font-weight: 400;
+                font-style: normal;
+            }
+            body {            
+                font-family: "Source Sans Pro";
+                font-style:  normal;
+                font-weight: 400;
+                font-size: 14px;
+            }
+            .countries {
+                fill: none;
+                stroke: #000;
+                stroke-width: 0.2;
+                stroke-linejoin: round;
+            }
+            .legendThreshold {}
+            .caption {
+                fill: #000;
+                text-anchor: start;
+                font-weight: bold;
+            }
+            .unselectable {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            #controls {
+                height: 40vw;
+                width: 20vw;
+                background: #f2f2f2;
+                display: block;
+                top: 15px;
+                right: 15px;
+                position: fixed;
+                padding: 10px;
+            }
+            input {
+                margin: .4rem;
+            }
+            .tooltip {
+                background-color:rgba(220,220,220,0.6);
+                -webkit-border-radius:10px;
+                -moz-border-radius:10px;
+                border-radius:10px;
+                padding: 4px;
+                font-weight: bold;
+            }
+        </style>
+        <svg></svg>
+        <form id='controls'>
+            <fieldset id="measureChoice" class="unselectable">
+                <legend>Measure Choice</legend>
+                <div><input type="radio" id="9_l_cal" name="measure" value="9_l_cal" checked><label for="9_l_cal">Cases 9l Calc</label></div>
+                <div><input type="radio" id="a_c_ord" name="measure" value="a_c_ord"><label for="a_c_ord">Actual Cases Order</label></div>
+                <div><input type="radio" id="9_l_ord" name="measure" value="9_l_ord"><label for="9_l_ord">Cases 9l order</label></div>
+                <div><input type="radio" id="a_c_fcs" name="measure" value="a_c_fcs"><label for="a_c_fcs">Actual Cases Forecast</label></div>
+                <div><input type="radio" id="9_l_fcs" name="measure" value="9_l_fcs"><label for="9_l_fcs">Cases 9l Forecast</label></div>
+                <div><input type="radio" id="a_c_cal" name="measure" value="a_c_cal"><label for="a_c_cal">Actual Cases Calc</label></div>
+            </fieldset>
+            <fieldset id="regionChoice" class="unselectable">
+                <legend>Team</legend>
+                <div><input type="radio" id="world" name="team" value="World"                  checked><label for="world">World</label></div>
+                <div><input type="radio" id="namgt" name="team" value="North America & GTR"           ><label for="namgt">North America & GTR</label></div>
+                <div><input type="radio" id="asiap" name="team" value="Asia domestic & PD"            ><label for="asiap">Asia domestic & PD</label></div>
+                <div><input type="radio" id="europ" name="team" value="France, Eastern & Western Euro"><label for="europ">France, Eastern & Western Euro</label></div>
+                <div><input type="radio" id="meala" name="team" value="Iberia, Africas, MENA & Latam" ><label for="meala">Iberia, Africas, MENA & Latam</label></div>
+            </fieldset>
+            <fieldset id="brandChoice" class="unselectable">
+                <legend>Brand</legend>     
+                <div><input type="radio" id="allbr" name="brand" value="All"                    checked><label for="allbr">All</label></div>
+                <div><input type="radio" id="norml" name="brand" value="The Glenlivet 12 YO"           ><label for="norml">The Glenlivet 12 YO</label></div>
+                <div><input type="radio" id="excel" name="brand" value="The Glenlivet 12 YO Excellence"><label for="excel">The Glenlivet 12 YO Excellence</label></div>
+                <div><input type="radio" id="brvap" name="brand" value="The Glenlivet 12 YO VAP"       ><label for="brvap">The Glenlivet 12 YO VAP</label></div>
+                <div><input type="radio" id="brnle" name="brand" value="The Glenlivet 12YO LE"         ><label for="brnle">The Glenlivet 12 YO LE</label></div>
+            </fieldset>
+        </form>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+        <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.24.0/d3-legend.js"></script>
+    </head>
+    <body>
+        <script src="data.js"></script>
+        <script>
+            let svg = d3.select("svg");
+            let projection = d3.geoNaturalEarth();
+            let path = d3.geoPath()
+                .projection(projection);
+            // Data and color scale
+            let data = d3.map();
+            let colorScheme = d3.schemeGreens[5];
+            colorScheme.unshift("#eee")
+            let colorScale = d3.scaleThreshold()
+                .domain([1, 101, 2501, 10001, 100001])
+                .range(colorScheme);
+            // Legend
+            let g = svg.append("g")
+                .attr("class", "legendThreshold")
+                .attr("transform", "translate(20,20)");
+            let labels = ['0', '1-100', '101-2500', '2501-10k', '10-100k', '> 100k'];
+            let legend = d3.legendColor()
+                .labels(d => labels[d.i])
+                .shapePadding(4)
+                .scale(colorScale);
+            svg.select(".legendThreshold")
+                .call(legend);
+            let tooltip = d3.select("body").append("div")
+                             .attr("class", "tooltip")
+                             .style("position", "absolute")
+                             .style("visibility", "hidden")
+                             .text("test");
+            
+            // Load external data and boot
+            let topo = '';
+            d3.queue()
+                .defer(d3.json, "http://enjalot.github.io/wwsd/data/world/world-110m.geojson")
+                .await(ready);
+            function sizeSVG () {
+                let wid = window.innerWidth * 0.8;
+                let hei = wid / 2;
+                svg.style("width", wid+ 'px');
+                svg.style("height", hei+ 'px');
+                projection.scale(wid / 2 / Math.PI)
+                          .translate([wid / 2, hei / 2]);
+            }
+            function makeData () {
+                let measure = document.querySelector('input[name="measure"]:checked').value;
+                let team    = document.querySelector('input[name="team"]:checked').value;                                                                       
+                let brand   = document.querySelector('input[name="brand"]:checked').value;                                                                       
+                let aggs = 'country_code';
+                let filSales = sales
+                                 .filter(d => team  === "World" || d.team  == team )
+                                 .filter(d => brand === "All"   || d.brand == brand);                                                                       
+                data = new Map(Object.entries(filSales.reduce((agg, val) => {
+                    agg[val[aggs]] = (agg[val[aggs]] || 0) + (val[measure] || 0);
+                    return agg;
+                }, {})));
+                drawMap();
+            }
+            function drawMap () {
+                // Clean up anything existing
+                svg.selectAll(".countries").remove();
+                sizeSVG();
+                // Draw the map
+                svg.append("g")
+                    .attr("class", "countries")
+                    .selectAll("path")
+                    .data(topo.features)
+                    .enter().append("path")
+                        .attr("fill", function (d) {
+                            // Pull data for this country
+                            d.total = data.get(d.id) || 0;
+                            // Set the color
+                            return colorScale(d.total);
+                        })
+                        .attr("d", path)
+                        .on("mouseover", d => {
+                            tooltip.style("visibility", "visible")
+                            tooltip.html(d.id + " " + d3.format(",.0f")(d.total))
+                        })
+                        .on("mousemove", () => {
+                            tooltip.style("top",  (event.pageY + 10) + "px")
+                                   .style("left", (event.pageX + 10) + "px")
+                        })
+                        .on("mouseout", () => tooltip.style("visibility", "hidden"));
+            }
+            function ready (error, topoData) {
+                if (error) throw error;
+                topo = topoData;
+                makeData();
+            }
+            window.addEventListener('resize', drawMap, true);
+            // Handle control changes
+            for (rad of document.querySelectorAll("input")) rad.onclick = () => makeData();
+        </script>
+    </body>
+</html>
