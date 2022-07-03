@@ -124,7 +124,7 @@
             // Load external data and boot
             let topo = '';
             d3.queue()
-                .defer(d3.json, "http://enjalot.github.io/wwsd/data/world/world-110m.geojson")
+                .defer(d3.json, "https://enjalot.github.io/wwsd/data/world/world-110m.geojson")
                 .await(ready);
             function sizeSVG () {
                 let wid = window.innerWidth * 0.8;
