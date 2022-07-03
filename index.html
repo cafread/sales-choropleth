@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <link rel="shortcut icon" href="favicon.ico"/>
-        <style>
+        <style type="text/css">
             @font-face {
                 font-family: Source Sans Pro;
                 src: local("Source Sans Pro"), local("SourceSansPro-Regular"), url(https://fonts.gstatic.com/s/sourcesanspro/v9/ODelI1aHBYDBqgeIAH2zlALoXdG0Fk4RrwjAMg10_dg.woff) format("woff");
@@ -57,6 +57,11 @@
                 padding: 4px;
                 font-weight: bold;
             }
+            .slider-container {
+                position: relative;
+                height:30px;
+                background-color: #eeeef5;
+            }
         </style>
         <svg></svg>
         <form id='controls'>
@@ -85,11 +90,18 @@
                 <div><input type="radio" id="brvap" name="brand" value="The Glenlivet 12 YO VAP"       ><label for="brvap">The Glenlivet 12 YO VAP</label></div>
                 <div><input type="radio" id="brnle" name="brand" value="The Glenlivet 12YO LE"         ><label for="brnle">The Glenlivet 12 YO LE</label></div>
             </fieldset>
+            <fieldset id="dateRange" class="unselectable">
+                <legend>Date Range</legend>
+                <div id="sl_lb">All Data</div>
+                <div id="datsl" class="slider-container"></div>
+            </fieldset>
         </form>
         <script src="https://d3js.org/d3.v4.min.js"></script>
         <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
         <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.24.0/d3-legend.js"></script>
+        <script src="https://cdn.rawgit.com/RasmusFonseca/d3RangeSlider/master/d3RangeSlider.js"></script>
+        <link href="https://cdn.rawgit.com/RasmusFonseca/d3RangeSlider/master/d3RangeSlider.css" rel="stylesheet">
     </head>
     <body>
         <script src="data.js"></script>
@@ -121,7 +133,11 @@
                              .style("position", "absolute")
                              .style("visibility", "hidden")
                              .text("test");
-            
+            // Date slider control
+            let allDates = [...new Set(sales.map(d => d.month))].sort();
+            let dateSlider = createD3RangeSlider(0, allDates.length - 1, "#datsl");
+            dateSlider.range(0, allDates.length - 1);
+            dateSlider.onChange(makeData);
             // Load external data and boot
             let topo = '';
             d3.queue()
@@ -135,14 +151,35 @@
                 projection.scale(wid / 2 / Math.PI)
                           .translate([wid / 2, hei / 2]);
             }
+            function dForm (yyyymm) {
+                return yyyymm.toString().substr(0, 4) + '-' + yyyymm.toString().substr(4, 2);
+            }
+            function readDateSlider () {
+                let dateRng = dateSlider.range(); // {begin: 0, end: 24}
+                let dtAll   = dateRng.begin === 0 && dateRng.end === allDates.length - 1;
+                if (dtAll) {
+                    d3.select('#sl_lb').html('All Data');
+                    return [true, 0, 0];
+                } else {
+                    let dtBeg = allDates[dateRng.begin];
+                    let dtEnd = allDates[dateRng.end];
+                    d3.select('#sl_lb').html('From ' + dForm(dtBeg) + ' ' + dForm(dtEnd));
+                    return [false, dtBeg, dtEnd];
+                }
+            }
             function makeData () {
                 let measure = document.querySelector('input[name="measure"]:checked').value;
-                let team    = document.querySelector('input[name="team"]:checked').value;                                                                       
-                let brand   = document.querySelector('input[name="brand"]:checked').value;                                                                       
+                let team    = document.querySelector('input[name="team"]:checked').value;
+                let brand   = document.querySelector('input[name="brand"]:checked').value;
+                
+                
+                let [dtAll, dtBeg, dtEnd] = readDateSlider();
+                
                 let aggs = 'country_code';
                 let filSales = sales
                                  .filter(d => team  === "World" || d.team  == team )
-                                 .filter(d => brand === "All"   || d.brand == brand);                                                                       
+                                 .filter(d => brand === "All"   || d.brand == brand)
+                                 .filter(d => dtAll === true    || (d.month >= dtBeg && d.month <= dtEnd));
                 data = new Map(Object.entries(filSales.reduce((agg, val) => {
                     agg[val[aggs]] = (agg[val[aggs]] || 0) + (val[measure] || 0);
                     return agg;
